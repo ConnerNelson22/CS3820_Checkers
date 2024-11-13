@@ -100,21 +100,21 @@ class Board:
                         else:
                             self.board[row].append(0)
         def draw(self, win):
-        self.draw_squares(win)
-        for row in range(ROWS):
-            for col in range(COLS):
-                piece = self.board[row][col]
-                if piece != 0:
-                    piece.draw(win)
+                self.draw_squares(win)
+                for row in range(ROWS):
+                    for col in range(COLS):
+                        piece = self.board[row][col]
+                        if piece != 0:
+                            piece.draw(win)
 
-    def remove(self, pieces):
-        for piece in pieces:
-            self.board[piece.row][piece.col] = 0
-            if piece != 0:
-                if piece.color == RED:
-                    self.red_left -= 1
-                else:
-                    self.white_left -= 1
+        def remove(self, pieces):
+                for piece in pieces:
+                    self.board[piece.row][piece.col] = 0
+                    if piece != 0:
+                        if piece.color == RED:
+                            self.red_left -= 1
+                        else:
+                            self.white_left -= 1
     
     def winner(self):
         if self.red_left <= 0:
