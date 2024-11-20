@@ -1,16 +1,17 @@
 import pygame
 from .constants import RED, WHITE, BLUE, SQUARE_SIZE
-from board import Board
+from .board import Board
 
 class Game:
-    def __init__(self, win):
+    def __init__(self, win=None):
         self._init()
         self.win = win
     
     def update(self):
-        self.board.draw(self.win)
-        self.draw_valid_moves(self.valid_moves)
-        pygame.display.update()
+        if self.win:
+            self.board.draw(self.win)
+            self.draw_valid_moves(self.valid_moves)
+            pygame.display.update()
 
     def _init(self):
         self.selected = None
@@ -19,7 +20,8 @@ class Game:
         self.valid_moves = {}
 
     def winner(self):
-        return self.board.winner()
+        result = self.board.winner()
+        return result
 
     def reset(self):
         self._init()
@@ -30,14 +32,22 @@ class Game:
             if not result:
                 self.selected = None
                 self.select(row, col)
-        
+
         piece = self.board.get_piece(row, col)
         if piece != 0 and piece.color == self.turn:
             self.selected = piece
-            self.valid_moves = self.board.get_valid_moves(piece)
+            valid_moves = self.board.get_valid_moves(piece)
+
+            # Enforce multi-jumps
+            multi_jump_moves = {move: skip for move, skip in valid_moves.items() if skip}
+            if multi_jump_moves:
+                self.valid_moves = multi_jump_moves
+            else:
+                self.valid_moves = valid_moves
             return True
-            
+
         return False
+
 
     def _move(self, row, col):
         piece = self.board.get_piece(row, col)
@@ -68,5 +78,13 @@ class Game:
         return self.board
 
     def ai_move(self, board):
+        if self.board == board:
+            print("AI move did not change the board.")
         self.board = board
         self.change_turn()
+
+    def has_legal_moves(self, color):
+        for piece in self.board.get_all_pieces(color):
+            if self.board.get_valid_moves(piece):
+                return True
+        return False

@@ -1,6 +1,7 @@
 import pygame
 from .constants import BLACK, ROWS, RED, SQUARE_SIZE, COLS, WHITE
 from .piece import Piece
+from copy import deepcopy
 
 class Board:
     def __init__(self):
@@ -30,12 +31,12 @@ class Board:
         self.board[piece.row][piece.col], self.board[row][col] = self.board[row][col], self.board[piece.row][piece.col]
         piece.move(row, col)
 
-        if row == ROWS - 1 or row == 0:
+        if row == ROWS - 1 or row == 0:  # Check if piece reached the end of the board
             piece.make_king()
             if piece.color == WHITE:
                 self.white_kings += 1
             else:
-                self.red_kings += 1 
+                self.red_kings += 1
 
     def get_piece(self, row, col):
         return self.board[row][col]
@@ -72,12 +73,16 @@ class Board:
                     self.white_left -= 1
     
     def winner(self):
-        if self.red_left <= 0:
-            return WHITE
-        elif self.white_left <= 0:
-            return RED
+        red_moves = any(self.get_valid_moves(piece) for piece in self.get_all_pieces(RED))
+        white_moves = any(self.get_valid_moves(piece) for piece in self.get_all_pieces(WHITE))
+
+        if not red_moves:
+            return WHITE  # White wins
+        elif not white_moves:
+            return RED  # Red wins
+        return None  # No winner yet
+
         
-        return None 
     
     def get_valid_moves(self, piece):
         moves = {}
@@ -86,76 +91,87 @@ class Board:
         row = piece.row
 
         if piece.color == RED or piece.king:
-            moves.update(self._traverse_left(row -1, max(row-3, -1), -1, piece.color, left))
-            moves.update(self._traverse_right(row -1, max(row-3, -1), -1, piece.color, right))
+            moves.update(self._traverse_left(row - 1, max(row - 3, -1), -1, piece.color, left))
+            moves.update(self._traverse_right(row - 1, max(row - 3, -1), -1, piece.color, right))
         if piece.color == WHITE or piece.king:
-            moves.update(self._traverse_left(row +1, min(row+3, ROWS), 1, piece.color, left))
-            moves.update(self._traverse_right(row +1, min(row+3, ROWS), 1, piece.color, right))
-    
+            moves.update(self._traverse_left(row + 1, min(row + 3, ROWS), 1, piece.color, left))
+            moves.update(self._traverse_right(row + 1, min(row + 3, ROWS), 1, piece.color, right))
+
         return moves
+
 
     def _traverse_left(self, start, stop, step, color, left, skipped=[]):
         moves = {}
         last = []
         for r in range(start, stop, step):
-            if left < 0:
+            if left < 0:  # Out of bounds
                 break
-            
+
             current = self.board[r][left]
-            if current == 0:
-                if skipped and not last:
+            if current == 0:  # Empty square
+                if skipped and not last:  # Invalid jump path
                     break
                 elif skipped:
-                    moves[(r, left)] = last + skipped
+                    moves[(r, left)] = last + skipped  # Add skipped pieces for this move
                 else:
                     moves[(r, left)] = last
-                
-                if last:
-                    if step == -1:
-                        row = max(r-3, 0)
-                    else:
-                        row = min(r+3, ROWS)
-                    moves.update(self._traverse_left(r+step, row, step, color, left-1,skipped=last))
-                    moves.update(self._traverse_right(r+step, row, step, color, left+1,skipped=last))
+
+                # Recursive call for multi-jumps
+                if last:  # If a piece was captured
+                    next_row = max(r - 3, 0) if step == -1 else min(r + 3, ROWS)
+                    moves.update(self._traverse_left(r + step, next_row, step, color, left - 1, skipped=last))
+                    moves.update(self._traverse_right(r + step, next_row, step, color, left + 1, skipped=last))
                 break
-            elif current.color == color:
+            elif current.color == color:  # Same color, no jump
                 break
-            else:
+            else:  # Opponent's piece
                 last = [current]
 
             left -= 1
-        
+
         return moves
+
 
     def _traverse_right(self, start, stop, step, color, right, skipped=[]):
         moves = {}
         last = []
         for r in range(start, stop, step):
-            if right >= COLS:
+            if right >= COLS:  # Out of bounds
                 break
-            
+
             current = self.board[r][right]
-            if current == 0:
-                if skipped and not last:
+            if current == 0:  # Empty square
+                if skipped and not last:  # Invalid jump path
                     break
                 elif skipped:
-                    moves[(r,right)] = last + skipped
+                    moves[(r, right)] = last + skipped  # Add skipped pieces for this move
                 else:
                     moves[(r, right)] = last
-                
-                if last:
-                    if step == -1:
-                        row = max(r-3, 0)
-                    else:
-                        row = min(r+3, ROWS)
-                    moves.update(self._traverse_left(r+step, row, step, color, right-1,skipped=last))
-                    moves.update(self._traverse_right(r+step, row, step, color, right+1,skipped=last))
+
+                # Recursive call for multi-jumps
+                if last:  # If a piece was captured
+                    next_row = max(r - 3, 0) if step == -1 else min(r + 3, ROWS)
+                    moves.update(self._traverse_left(r + step, next_row, step, color, right - 1, skipped=last))
+                    moves.update(self._traverse_right(r + step, next_row, step, color, right + 1, skipped=last))
                 break
-            elif current.color == color:
+            elif current.color == color:  # Same color, no jump
                 break
-            else:
+            else:  # Opponent's piece
                 last = [current]
 
             right += 1
-        
+
         return moves
+
+    def simulate_move(self, piece, move, board, game, skipped):
+        """
+        Simulates moving a piece on the board without affecting the actual game state.
+        """
+        temp_board = deepcopy(board)  # Create a copy of the board
+        temp_piece = temp_board.get_piece(piece.row, piece.col)  # Get the piece on the copied board
+        temp_board.move(temp_piece, move[0], move[1])  # Move the piece
+
+        if skipped:
+            temp_board.remove(skipped)  # Remove skipped pieces if applicable
+
+        return temp_board  # Return the simulated board

@@ -1,133 +1,114 @@
-## Piece and Position Evaluation: evaluate_piece() and POSITION_VALUES help assess each piece's value
-## Minimax with Adaptive Depth: The minimax() function is used to decide the best move. The adijust_difficulty() function adapts the minimax search depth based on the AI's performance relative to the player
-## Explanation of Moves: explain_move() provides an explanation for each move, printed in select_best_move()
-## Game Loop: The game_loop() function simulates turn-based sequence for the AI and player moves
+import json
+import os
+from hashlib import sha256
+from Checkers_Logic.constants import WHITE, RED
+from copy import deepcopy
+
+class Adaptive_AI:
+    def __init__(self, transposition_path="Checkers_Logic/data/transposition_table.json", depth = 3):
+        self.current_depth = depth
+        self.transposition_path = transposition_path
+        self.transposition_table = self.load_transposition_table()
+
+    def load_transposition_table(self):
+        # Update the path to point to AI_Logic
+        self.transposition_path = "AI_Logic/transposition_table.json"
+
+        # Ensure the directory exists
+        os.makedirs(os.path.dirname(self.transposition_path), exist_ok=True)
+
+        if not os.path.exists(self.transposition_path):
+            # Create an empty JSON file if it doesn't exist
+            print(f"Transposition table not found. Creating a new one at {self.transposition_path}.")
+            with open(self.transposition_path, 'w') as file:
+                json.dump({}, file)
+
+        # Load the table from the file
+        with open(self.transposition_path, 'r') as file:
+            return json.load(file)
 
 
-import pygame
-import copy
+    def save_transposition_table(self):
+        with open(self.transposition_path, 'w') as file:
+            json.dump(self.transposition_table, file)
 
-# Sample weights for board positions
-POSITION_VALUES = [
-    [3, 4, 4, 4, 4, 4, 4, 3],
-    [4, 6, 6, 6, 6, 6, 6, 4],
-    [4, 6, 8, 8, 8, 8, 6, 4],
-    [4, 6, 8, 10, 10, 8, 6, 4],
-    [4, 6, 8, 10, 10, 8, 6, 4],
-    [4, 6, 8, 8, 8, 8, 6, 4],
-    [4, 6, 6, 6, 6, 6, 6, 4],
-    [3, 4, 4, 4, 4, 4, 4, 3]
-]
+    def hash_board(self, board):
+        # Create a unique hash for the board state
+        board_string = "".join(
+            f"{piece.row}-{piece.col}-{piece.color}-{piece.king}"
+            for row in board.board
+            for piece in row if piece != 0
+        )
+        return sha256(board_string.encode()).hexdigest()
 
-# Sample piece evaluation function
-def evaluate_piece(piece, row, col):
-    value = 10 if piece.is_king else 5  # Assign higher value for kings
-    value += POSITION_VALUES[row][col]  # Add positional value
-    return value
+    def adaptive_minimax(self, position, depth, max_player, game, alpha=float('-inf'), beta=float('inf')):
+        if depth == 0 or position.winner() is not None:
+            eval_score = position.evaluate()
+            return eval_score, position
 
-# Evaluate the entire board for AI decision-making
-def evaluate_board(board):
-    score = 0
-    for row in range(len(board)):
-        for col in range(len(board[row])):
-            piece = board[row][col]
-            if piece:
-                if piece.color == 'AI':  # AI-controlled pieces
-                    score += evaluate_piece(piece, row, col)
-                else:
-                    score -= evaluate_piece(piece, row, col)
-    return score
-
-# Minimax function for AI decision-making
-def minimax(board, depth, maximizing_player):
-    if depth == 0 or is_game_over(board):
-        return evaluate_board(board)
-
-    if maximizing_player:
-        max_eval = float('-inf')
-        for move in get_all_moves(board, 'AI'):
-            new_board = make_move(copy.deepcopy(board), move)
-            evaluation = minimax(new_board, depth - 1, False)
-            max_eval = max(max_eval, evaluation)
-        return max_eval
-    else:
-        min_eval = float('inf')
-        for move in get_all_moves(board, 'Player'):
-            new_board = make_move(copy.deepcopy(board), move)
-            evaluation = minimax(new_board, depth - 1, True)
-            min_eval = min(min_eval, evaluation)
-        return min_eval
-
-# Check if the game is over (pseudo-code for illustration)
-def is_game_over(board):
-    # Implement game-over condition checks, e.g., no moves for one side
-    return False
-
-# Get all valid moves for a given player (pseudo-code for illustration)
-def get_all_moves(board, player):
-    # Implement move generation based on current board state and player
-    return []
-
-# Make a move on the board (pseudo-code for illustration)
-def make_move(board, move):
-    # Update the board state by making the move
-    return board
-
-# Adaptive difficulty adjustment
-def adjust_difficulty(player_score, ai_score):
-    if player_score > ai_score:
-        return 3  # Increase depth
-    elif player_score < ai_score:
-        return 1  # Reduce depth
-    else:
-        return 2  # Moderate depth
-
-# Explanation for each move
-def explain_move(move):
-    if move.is_capture:
-        return "Capture move to gain material advantage."
-    elif is_central(move):
-        return "Move to a central position for board control."
-    else:
-        return "Standard positional move."
-
-# Helper function to check if move is central
-def is_central(move):
-    return 2 <= move.row <= 5 and 2 <= move.col <= 5
-
-# Main AI move selection function
-def select_best_move(board, difficulty_level):
-    best_score = float('-inf')
-    best_move = None
-    for move in get_all_moves(board, 'AI'):
-        new_board = make_move(copy.deepcopy(board), move)
-        move_score = minimax(new_board, difficulty_level, False)
-        if move_score > best_score:
-            best_score = move_score
-            best_move = move
-    print(explain_move(best_move))  # Print explanation for the selected move
-    return best_move
-
-# Example game loop (pseudo-code)
-def game_loop():
-    board = initialize_board()
-    player_score, ai_score = 0, 0
-    difficulty_level = 2
-
-    while not is_game_over(board):
-        difficulty_level = adjust_difficulty(player_score, ai_score)
-        if current_turn == 'AI':
-            best_move = select_best_move(board, difficulty_level)
-            board = make_move(board, best_move)
-            ai_score += evaluate_board(board)
+        if max_player:
+            max_eval = float('-inf')
+            best_move = None
+            for move in self.get_all_moves(position, WHITE, game):
+                evaluation = self.adaptive_minimax(move, depth - 1, False, game, alpha, beta)[0]
+                if evaluation > max_eval:
+                    max_eval = evaluation
+                    best_move = move
+                alpha = max(alpha, max_eval)
+                if beta <= alpha:
+                    break
+            return max_eval, best_move
         else:
-            # Handle player move here
-            pass
+            min_eval = float('inf')
+            best_move = None
+            for move in self.get_all_moves(position, RED, game):
+                evaluation = self.adaptive_minimax(move, depth - 1, True, game, alpha, beta)[0]
+                if evaluation < min_eval:
+                    min_eval = evaluation
+                    best_move = move
+                beta = min(beta, min_eval)
+                if beta <= alpha:
+                    break
+            return min_eval, best_move
 
-# Initialize the game
-def initialize_board():
-    # Set up the initial board state
-    return [[None] * 8 for _ in range(8)]
+        
+    def evaluate_player_move(self, board_before, board_after):
+        return board_after.evaluate() - board_before.evaluate()
 
+    def adjust_difficulty(self, player_move_quality):
+        if player_move_quality < -0.5:  # Player made a very poor move
+            self.current_depth = max(1, self.current_depth - 1)
+        elif player_move_quality < 0:  # Player made a somewhat poor move
+            self.current_depth = max(2, self.current_depth - 1)
+        elif player_move_quality > 0.5:  # Player made a very strong move
+            self.current_depth = min(6, self.current_depth + 1)
+        elif player_move_quality > 0:  # Player made a somewhat strong move
+            self.current_depth = min(5, self.current_depth + 1)
 
+    def make_adaptive_move(self, game):
+        board_before = deepcopy(game.get_board())
+        value, new_board = self.adaptive_minimax(board_before, self.current_depth, True, game)
+        if new_board == board_before:
+            print("AI failed to find a better move. No valid moves applied.")
+        else:
+            print(f"AI selected a move with evaluation: {value}")
+        return new_board, f"Move evaluated with outcome: {value}"
 
+    def get_all_moves(self, board, color, game):
+        
+        moves = []
+        for piece in board.get_all_pieces(color):
+            valid_moves = board.get_valid_moves(piece)
+            for move, skip in valid_moves.items():
+                # Simulate the move on a temporary board
+                temp_board = deepcopy(board)
+                temp_piece = temp_board.get_piece(piece.row, piece.col)
+                new_board = self.simulate_move(temp_piece, move, temp_board, game, skip)
+                moves.append(new_board)
+        return moves
+    
+    def simulate_move(self, piece, move, board, game, skip):
+        board.move(piece, move[0], move[1])
+        if skip:
+            board.remove(skip)
+        return board
