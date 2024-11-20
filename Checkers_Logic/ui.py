@@ -6,11 +6,13 @@ class Game:
     def __init__(self, win=None):
         self._init()
         self.win = win
-    
+        self.current_explanation = ""  # Add explanation storage
+
     def update(self):
         if self.win:
             self.board.draw(self.win)
             self.draw_valid_moves(self.valid_moves)
+            self.draw_explanation()  # Draw explanation if the window exists
             pygame.display.update()
 
     def _init(self):
@@ -18,6 +20,7 @@ class Game:
         self.board = Board()
         self.turn = RED
         self.valid_moves = {}
+        self.current_explanation = ""
 
     def winner(self):
         result = self.board.winner()
@@ -48,7 +51,6 @@ class Game:
 
         return False
 
-
     def _move(self, row, col):
         piece = self.board.get_piece(row, col)
         if self.selected and piece == 0 and (row, col) in self.valid_moves:
@@ -63,9 +65,24 @@ class Game:
         return True
 
     def draw_valid_moves(self, moves):
-        for move in moves:
-            row, col = move
-            pygame.draw.circle(self.win, BLUE, (col * SQUARE_SIZE + SQUARE_SIZE//2, row * SQUARE_SIZE + SQUARE_SIZE//2), 15)
+        if self.win:
+            for move in moves:
+                row, col = move
+                pygame.draw.circle(
+                    self.win,
+                    BLUE,
+                    (col * SQUARE_SIZE + SQUARE_SIZE // 2, row * SQUARE_SIZE + SQUARE_SIZE // 2),
+                    15,
+                )
+
+    def draw_explanation(self):
+        if self.win and self.current_explanation:
+            font = pygame.font.SysFont("arial", 24)
+            explanation_surface = font.render(f"Explanation: {self.current_explanation}", True, (255, 255, 255))
+            self.win.blit(explanation_surface, (20, SQUARE_SIZE * 8 + 10))
+
+    def update_explanation(self, explanation):
+        self.current_explanation = explanation
 
     def change_turn(self):
         self.valid_moves = {}

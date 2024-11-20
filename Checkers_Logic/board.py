@@ -17,7 +17,23 @@ class Board:
                 pygame.draw.rect(win, RED, (row*SQUARE_SIZE, col *SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE))
 
     def evaluate(self):
-        return self.white_left - self.red_left + (self.white_kings * 0.5 - self.red_kings * 0.5)
+        material_score = self.white_left - self.red_left  # Piece count difference
+        king_score = (self.white_kings * 1.5) - (self.red_kings * 1.5)  # Kings are more valuable
+        center_control = 0
+
+        for row in range(ROWS):
+            for col in range(COLS):
+                piece = self.get_piece(row, col)
+                if piece != 0:
+                    # Reward pieces near the center of the board
+                    if 2 <= row <= ROWS - 3 and 2 <= col <= COLS - 3:
+                        if piece.color == WHITE:
+                            center_control += 0.5
+                        elif piece.color == RED:
+                            center_control -= 0.5
+
+        return material_score + king_score + center_control
+
 
     def get_all_pieces(self, color):
         pieces = []
