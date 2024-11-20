@@ -1,3 +1,4 @@
+# PLEASE NOTE THAT THIS WHOLE CODE IS FROM https://github.com/techwithtim/Python-Checkers-AI AND ALSO HAS A YOUTUBE VIDEO ON IT
 import pygame
 
 #Using .constants to make sure that everything is constant
