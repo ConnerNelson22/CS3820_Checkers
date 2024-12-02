@@ -10,6 +10,7 @@ class Adaptive_AI:
         self.transposition_path = transposition_path
         self.transposition_table = self.load_transposition_table()
 
+    # Load up the transosition table
     def load_transposition_table(self):
         # Update the path to point to AI_Logic
         self.transposition_path = "AI_Logic/transposition_table.json"
@@ -27,7 +28,7 @@ class Adaptive_AI:
         with open(self.transposition_path, 'r') as file:
             return json.load(file)
 
-
+    # Save the transposition table
     def save_transposition_table(self):
         with open(self.transposition_path, 'w') as file:
             json.dump(self.transposition_table, file)
@@ -41,6 +42,7 @@ class Adaptive_AI:
         )
         return sha256(board_string.encode()).hexdigest()
 
+    # Minimax algorithm with alpha-beta pruning
     def adaptive_minimax(self, position, depth, max_player, game, alpha=float('-inf'), beta=float('inf')):
         if depth == 0 or position.winner() is not None:
             eval_score = position.evaluate()
@@ -88,15 +90,7 @@ class Adaptive_AI:
                         break
             return min_eval, best_move, best_reason
 
-
-
-
-
-
-        
-    def evaluate_player_move(self, board_before, board_after):
-        return board_after.evaluate() - board_before.evaluate()
-
+    # this function is not used, but the hope was to be able to get the ai to adjust itself based on the player's moves
     def adjust_difficulty(self, player_move_quality):
         if player_move_quality < -0.5:  # Player made a very poor move
             self.current_depth = max(1, self.current_depth - 1)
@@ -107,6 +101,7 @@ class Adaptive_AI:
         elif player_move_quality > 0:  # Player made a somewhat strong move
             self.current_depth = min(5, self.current_depth + 1)
 
+    # This function is used to make the AI move
     def make_adaptive_move(self, game):
         board_before = deepcopy(game.get_board())
         evaluation, new_board, reason = self.adaptive_minimax(board_before, self.current_depth, True, game)
@@ -120,28 +115,6 @@ class Adaptive_AI:
         self.save_transposition_table()
 
         return new_board, reason
-
-
-
-
-
-
-
-    def get_all_moves(self, board, color, game):
-        moves = []
-        for piece in board.get_all_pieces(color):
-            valid_moves = board.get_valid_moves(piece)
-            for move, skip in valid_moves.items():
-                temp_board = deepcopy(board)
-                temp_piece = temp_board.get_piece(piece.row, piece.col)
-                new_board = self.simulate_move(temp_piece, move, temp_board, game, skip)
-                evaluation = new_board.evaluate()
-                moves.append((new_board, evaluation))
-
-        # Sort moves by evaluation descending for max player, ascending for min player
-        moves.sort(key=lambda x: x[1], reverse=(color == WHITE))
-        return [move[0] for move in moves]
-
     
     def simulate_move(self, piece, move, board, game, skip):
         board.move(piece, move[0], move[1])
@@ -167,6 +140,7 @@ class Adaptive_AI:
             return f"I made this move to slightly improve my board position. Evaluation improved from {piece_score_before} to {piece_score_after}."
         return f"I made this move as the best available option at depth {self.current_depth}. Current evaluation: {piece_score_after}."
 
+    # Generate a reason for the AI's move
     def generate_reason(self, board_before, board_after, color, move):
         material_gain = board_after.evaluate() - board_before.evaluate()
         piece = board_before.get_piece(*move)
@@ -197,6 +171,7 @@ class Adaptive_AI:
         # Randomize reason selection to avoid repetition
         return reasons[0] if reasons else "I made this move based on the current evaluation."
 
+    # Check if a piece is threatened by an opponent's move
     def is_piece_threatened(self, board, move):
         row, col = move
         piece = board.get_piece(row, col)

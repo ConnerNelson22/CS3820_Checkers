@@ -34,7 +34,7 @@ class Board:
 
         return material_score + king_score + center_control
 
-
+    # Get all pieces of a given color
     def get_all_pieces(self, color):
         pieces = []
         for row in self.board:
@@ -43,6 +43,7 @@ class Board:
                     pieces.append(piece)
         return pieces
 
+    # move the piece to the new row and column
     def move(self, piece, row, col):
         self.board[piece.row][piece.col], self.board[row][col] = self.board[row][col], self.board[piece.row][piece.col]
         piece.move(row, col)
@@ -54,9 +55,11 @@ class Board:
             else:
                 self.red_kings += 1
 
+    # Get the piece at a given row and column
     def get_piece(self, row, col):
         return self.board[row][col]
 
+    # Create the board
     def create_board(self):
         for row in range(ROWS):
             self.board.append([])
@@ -88,6 +91,7 @@ class Board:
                 else:
                     self.white_left -= 1
     
+    # determine if the game is over and return the winner
     def winner(self):
         red_moves = any(self.get_valid_moves(piece) for piece in self.get_all_pieces(RED))
         white_moves = any(self.get_valid_moves(piece) for piece in self.get_all_pieces(WHITE))
@@ -98,8 +102,7 @@ class Board:
             return RED  # Red wins
         return None  # No winner yet
 
-        
-    
+    # Get all valid moves for a given piece
     def get_valid_moves(self, piece):
         moves = {}
         left = piece.col - 1
@@ -115,7 +118,7 @@ class Board:
 
         return moves
 
-
+    # determine the moves for a piece to the left
     def _traverse_left(self, start, stop, step, color, left, skipped=[]):
         moves = {}
         last = []
@@ -147,7 +150,7 @@ class Board:
 
         return moves
 
-
+    # determine the moves for a piece to the right
     def _traverse_right(self, start, stop, step, color, right, skipped=[]):
         moves = {}
         last = []
@@ -180,9 +183,6 @@ class Board:
         return moves
 
     def simulate_move(self, piece, move, board, game, skipped):
-        """
-        Simulates moving a piece on the board without affecting the actual game state.
-        """
         temp_board = deepcopy(board)  # Create a copy of the board
         temp_piece = temp_board.get_piece(piece.row, piece.col)  # Get the piece on the copied board
         temp_board.move(temp_piece, move[0], move[1])  # Move the piece
